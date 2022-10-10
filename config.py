@@ -172,7 +172,7 @@ def get_base_parser():
     basic_group.add_argument('--decoder_type',
                              type=str, default="ctransformer",
                              help='types of decoder')
-    setup_group.add_argument('--n_epoch', type=int, default=5,
+    setup_group.add_argument('--n_epoch', type=int, default=1,
                              help='number of epochs')
     setup_group.add_argument('--max_gen_len', type=int, default=200,
                              help='maximum length for generation')
@@ -202,6 +202,8 @@ def get_base_parser():
                              help='filter ngram during beam search')
     setup_group.add_argument('--beam_size', type=int, default=10,
                              help='size for beam search')
+    setup_group.add_argument('--use_entmax', type="bool", default=False,
+                             help='entmax')
     setup_group.add_argument('--return_wikidata', type="bool", default=False,
                              help='whether to mask predict wikidata')
     setup_group.add_argument('--return_hyperlink', type="bool", default=True,
