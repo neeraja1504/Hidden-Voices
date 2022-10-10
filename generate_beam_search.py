@@ -10,6 +10,13 @@ import os
 from train_helper import run_multi_bleu
 from config import EOS_IDX
 from tqdm import tqdm
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+if(torch.cuda.is_available()):
+    gpu=0
+    device='cuda:{}'.format(gpu)
+else:
+  device='cpu' 
 
 BEST_DEV_BLEU = TEST_BLEU = 0
 
@@ -70,7 +77,7 @@ def run(e):
     e.log.info(model)
     e.log.info("*" * 25 + " MODEL INITIALIZATION " + "*" * 25)
 
-    dev_eval = train_helper.SplitMaskEvaluator(
+    dev_eval = train_helper.Evaluator(
         model=model,
         data=data.dev_data,
         inv_vocab=data.inv_vocab,
@@ -81,7 +88,12 @@ def run(e):
         input_hyperlink=e.config.input_hyperlink,
         eval_batch_size=e.config.eval_batch_size,
         experiment=model_exp)
-
+    # dev_eval.to(device)
+   
+    model=model.to(device)
+    print(next(model.parameters()).is_cuda)
+    # print("Model Device",model.parameters().get_device())
+   
     model.eval()
     gen_fn = e.config.gen_prefix
     output_path = e.config.gen_dir \
@@ -93,6 +105,8 @@ def run(e):
     print("e.config.max_gen_len", e.config.max_gen_len,
           "e.config.min_gen_len", e.config.min_gen_len)
     all_gen = {}
+    print("Checking if type of tensors")
+    print
     for nbatch, (input_data, input_data_mask, input_data_pos,
                  input_data_type, input_if_hyp,
                  input_data_src_vocab, input_data_src_tgt_vocab_map,
@@ -103,6 +117,31 @@ def run(e):
                  tgt_src_vocab, batch_idx) in tqdm(
             enumerate(dev_eval.data_iterator),
             total=len(dev_eval.data_iterator)):
+        list1=[input_data, input_data_mask, input_data_pos,
+                 input_data_type, input_if_hyp,
+                 input_data_src_vocab, input_data_src_tgt_vocab_map,
+                 tgt_inp_data, tgt_inp_data_mask, tgt_inp_data_pos,
+                 tgt_inp_data_type, tgt_inp_data_if_hyp,
+                 tgt_out_data, tgt_out_data_mask,
+                 tgt_input, tgt_label, tgt_mask,
+                 tgt_src_vocab]
+        for i in list1:
+            i=torch.from_numpy(i)
+            i=i.to(device) 
+            print(i.get_device())
+#            
+        batch_idx=torch.FloatTensor(batch_idx) 
+        batch_idx=batch_idx.to(device)
+        print("batch",batch_idx.get_device())
+        
+        
+        input_data = torch.from_numpy(input_data)
+        input_data=input_data.to(device)
+        print("Input data device type",input_data.get_device())
+        
+#         input_data = torch.from_numpy(input_data)
+#         input_data=input_data.to(device)
+#         print("Input data device type",input_data.get_device())
         if nbatch and nbatch % (len(dev_eval.data_iterator) // 10 + 1) == 0:
             e.log.info("evaluating progress: {}/{} = {:.2f} %"
                        .format(nbatch,
@@ -110,6 +149,7 @@ def run(e):
                                nbatch / (len(dev_eval.data_iterator) + 1) * 100)
                        )
         with torch.no_grad():
+            print("Evaluating beam search now")
             data, data_mask, data_pos, \
                 data_type, data_if_hyp, data_src_vocab,\
                 data_src_tgt_vocab_map = \
