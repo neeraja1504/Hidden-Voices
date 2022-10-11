@@ -6,6 +6,8 @@ import torch
 import sys
 import nltk
 import os
+import nltk
+nltk.download('punkt')
 
 from train_helper import run_multi_bleu
 from config import EOS_IDX
@@ -68,7 +70,7 @@ def run(e):
         vocab_size=len(data.vocab),
         type_vocab_size=500,
         embed_dim=model_exp.config.edim,
-        iter_per_epoch=100,
+        iter_per_epoch=8,
         use_entmax=False,
         experiment=model_exp)
 
@@ -158,9 +160,10 @@ def run(e):
                                  input_if_hyp,
                                  input_data_src_vocab,
                                  input_data_src_tgt_vocab_map)
+            print("Encoding now")
             data_vec = model.encode(
                 data, data_mask, data_pos, data_type, data_if_hyp)
-
+            print("Decoding now")
             batch_gen, batch_nll, batch_len = model.decode.generate_beam(
                 encoder_output=data_vec,
                 encoder_mask=data_mask,
@@ -206,16 +209,20 @@ def run(e):
             hyp = all_gen[hyp_idx]
             fp2.write(ref["tok_text"] + "\n")
             fpu2.write(ref["untok_text"] + "\n")
+            print("hyp is",hyp)
             if hyp:
+                print("inside hyp loop")
                 tok_hyp = nltk.word_tokenize(hyp)
+                print(tok_hyp)
                 gen_len_list.append(len(tok_hyp))
                 tok_hyp = " ".join(tok_hyp)
+                print(tok_hyp)
                 fp.write(tok_hyp + "\n")
                 fpu.write(hyp + "\n")
-            else:
-                gen_len_list.append(0)
-                fp.write("<placeholder>\n")
-                fpu.write("<placeholder>\n")
+            # else:
+            #     gen_len_list.append(0)
+            #     fp.write("<placeholder>\n")
+            #     fpu.write("<placeholder>\n")
     bleu_score = run_multi_bleu(file_name, ref_file_name)
     e.log.info("generated sentences saved to: {}".format(file_name))
 
